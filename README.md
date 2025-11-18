@@ -15,9 +15,12 @@ To use this mod, you will need the following:
 ![required input settings](img/settings_input.jpg)
 
 ## Installation
-1. Download the latest mod files from Releases.
+1. Download the latest mod files from [Releases](https://github.com/init-ok/pso_bb_virtual_keyboard/releases/).
 2. Extract them to the game directory, e.g. `C:\Users\my_username\EphineaPSO`.
-3. Start the game and press the back button on your Xbox controller to open the keyboard.
+3. Start the game and press the select button on your Xbox controller to open the keyboard.
+
+## Controls
+The select button on the Xbox controller will open/close the virtual keyboard. `OK` emulates pressing the enter button on the keyboard, whereas `Exit` emulates presing the escape key on the keyboard and closing chat. 
 
 ## Changing the keyboard size
 A `config.ini` file is created the first time the game is launched with the mod installed.
