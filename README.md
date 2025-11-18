@@ -20,9 +20,12 @@ To use this mod, you will need the following:
 3. Start the game and press the select button on your Xbox controller to open the keyboard.
 
 ## Controls
-The select button on the Xbox controller will open/close the virtual keyboard. `OK` emulates pressing the enter button on the keyboard, whereas `Exit` emulates presing the escape key on the keyboard and closing chat. 
+Select button: opens/closes the virtual keyboard.  
 
-The right analog stick can be used to move the onscreen keyboard.
+The following controls can be used when the keyboard is open:  
+D-pad: moves the keyboard cursor.  
+A button: presses the selected button.  
+Right analog stick: moves the onscreen keyboard.  
 
 ## Changing the keyboard size
 A `config.ini` file is created the first time the game is launched with the mod installed.
