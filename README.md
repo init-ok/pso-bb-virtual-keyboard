@@ -1,7 +1,7 @@
 # About
 This mod lets you type in text chat and in text fields using a controller in Phantasy Star Online Blue Burst (PSOBB) on PC.
 
-![demo image](img/demo.png)
+![demo image](img/demo.jpg)
 
 ## Compatibility
 To use this mod, you will need the following:
@@ -9,10 +9,10 @@ To use this mod, you will need the following:
 1. An Xbox controller.
 
 2. "Direct3D 9" selected in the launcher settings:
-![required graphics settings](img/settings_graphics.png)
+![required graphics settings](img/settings_graphics.jpg)
 
 3. "Use XInput for gamepad" enabled in the launcher settings:
-![required input settings](img/settings_input.png)
+![required input settings](img/settings_input.jpg)
 
 ## Installation
 1. Download the latest mod files from Releases.
