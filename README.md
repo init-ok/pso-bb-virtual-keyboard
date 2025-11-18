@@ -1,5 +1,5 @@
 # About
-This mod lets you type in text chat and in text fields using a controller in Phantasy Star Online Blue Burst (PSOBB) on PC.
+This mod lets you type in text chat and in text fields using a controller in Phantasy Star Online Blue Burst (PSOBB) on PC by adding a virtual onscreen keyboard.
 
 ![demo image](img/demo.jpg)
 
