@@ -1,0 +1,1 @@
+python gen_def.py C:\Windows\SysWOW64\d3d9.dll > d3d9_loader.def
