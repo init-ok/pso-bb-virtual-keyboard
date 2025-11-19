@@ -170,6 +170,10 @@ static char ToChar(wchar_t wch) {
   }
 }
 
+// These are a weird special case because they technically aren't buttons.
+const int XINPUT_GAMEPAD_LEFT_TRIGGER = 1337;
+const int XINPUT_GAMEPAD_RIGHT_TRIGGER = 1338;
+
 static std::vector<int> ButtonComboFromString(std::string comboString) {
   std::unordered_map<std::string, int> controlMap{
       {"DPAD_UP", XINPUT_GAMEPAD_DPAD_UP},
@@ -182,6 +186,8 @@ static std::vector<int> ButtonComboFromString(std::string comboString) {
       {"RIGHT_THUMB", XINPUT_GAMEPAD_RIGHT_THUMB},
       {"LEFT_SHOULDER", XINPUT_GAMEPAD_LEFT_SHOULDER},
       {"RIGHT_SHOULDER", XINPUT_GAMEPAD_RIGHT_SHOULDER},
+      {"LEFT_TRIGGER", XINPUT_GAMEPAD_LEFT_TRIGGER},
+      {"RIGHT_TRIGGER", XINPUT_GAMEPAD_RIGHT_TRIGGER},
       {"A", XINPUT_GAMEPAD_A},
       {"B", XINPUT_GAMEPAD_B},
       {"X", XINPUT_GAMEPAD_X},
@@ -222,13 +228,23 @@ static std::vector<int> ButtonComboFromString(std::string comboString) {
 }
 
 static std::vector<int> toggleKeyboardButtonCombo;
-static bool IsToggleKeyboardButtonPressed(WORD buttons) {
+static bool IsToggleKeyboardButtonPressed(XINPUT_GAMEPAD gamepad) {
   if (toggleKeyboardButtonCombo.empty()) {
     LOG("The 'Toggle keyboard' button combo was unexpectedly empty.");
     exit(1);
   }
+  WORD buttons = gamepad.wButtons;
   for (auto key : toggleKeyboardButtonCombo) {
-    if ((buttons & key) == 0) {
+    // Check special cases first
+    if (key == XINPUT_GAMEPAD_LEFT_TRIGGER) {
+      if (gamepad.bLeftTrigger < XINPUT_GAMEPAD_TRIGGER_THRESHOLD) {
+        return false;
+      }
+    } else if (key == XINPUT_GAMEPAD_RIGHT_TRIGGER) {
+      if (gamepad.bRightTrigger < XINPUT_GAMEPAD_TRIGGER_THRESHOLD) {
+        return false;
+      }
+    } else if ((buttons & key) == 0) {
       return false;
     }
   }
@@ -290,7 +306,7 @@ static DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex,
 
   // Open virtual keyboard if back button was pressed.
   static bool toggleKbPressedPrev = false;
-  bool toggleKbPressed = IsToggleKeyboardButtonPressed(buttons);
+  bool toggleKbPressed = IsToggleKeyboardButtonPressed(pState->Gamepad);
   if (!virtualKeyboard.enabled && toggleKbPressed && !toggleKbPressedPrev) {
     LOG("Opening keyboard");
 
