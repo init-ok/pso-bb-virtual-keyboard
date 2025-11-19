@@ -6,7 +6,7 @@ This mod lets you type in text chat and in text fields using a controller in Pha
 ## Compatibility
 To use this mod, you will need the following:
 
-1. An Xbox controller.
+1. An Xbox controller. Alternatively, you can launch the game through Steam and use Steam Input. 
 
 2. "Direct3D 9" selected in the launcher settings:
 ![required graphics settings](img/settings_graphics.jpg)
