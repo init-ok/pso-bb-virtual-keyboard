@@ -23,7 +23,6 @@ namespace fs = std::filesystem;
 inline std::string GetTimestamp() {
   time_t rawtime;
   struct tm timeinfo;
-  errno_t err;
 
   // Get the current calendar time
   time(&rawtime);
