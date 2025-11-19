@@ -20,24 +20,35 @@ To use this mod, you will need the following:
 3. Start the game and press the select button on your Xbox controller to open the keyboard.
 
 ## Controls
-Select button: opens/closes the virtual keyboard.  
+Select button (default setting): opens/closes the virtual keyboard.  
 
 The following controls can be used when the keyboard is open:  
 D-pad: moves the keyboard cursor.  
 A button: presses the selected button.  
 Right analog stick: moves the onscreen keyboard.  
 
-## Changing the keyboard size
-A `config.ini` file is created the first time the game is launched with the mod installed.
+## Configuration
+A `config.ini` file is created in the `mod` directory the first time the game is launched with the mod installed. You can use this file to configure the settings.
 
-You can change the keyboard size by modifying the `virtual_keyboard_scale` variable in this file, for example, changing it to 2:
+### Changing the toggle keyboard binding
+You can change the keybinding that's used to toggle the keyboard by modifying the toggle_keyboard_combo variable in the config file, for example, changing it to toggle when left shoulder and x are pressed at the same time:
 ```
-[prefs]
+toggle_keyboard_combo = left_shoulder + x
+```
+
+The possible buttons names you can specify here are case-insensitive and named according to the XInput API:
+```
+a, b, x, y, start, back, left_thumb, right_thumb, left_shoulder, right_shoulder, dpad_up, dpad_down, dpad_left, dpad_right
+```
+
+### Changing the keyboard size
+You can change the keyboard size by modifying the `virtual_keyboard_scale` variable in config file, for example, changing it to 2:
+```
 virtual_keyboard_scale = 2
 ```
 
 ## Troubleshooting
-The mod and mod loader write logs to a `logs.txt` file that's stored in the `mod` folder. Please share this file (if applicable) when filing Github issues.
+The mod and mod loader write logs to a `logs.txt` file that's stored in the `mod` folder. Please share this file (if applicable) when filing GitHub issues.
 
 ## Development
 After building a project within the Visual Studio solution, VS will copy the associated built files to the game directory, which is assumed to be `C:\Users\<username>\EphineaPSO`.
