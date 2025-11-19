@@ -73,8 +73,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)external\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(OutDir) $(USERPROFILE)\EphineaPSO\mod 
-copy /Y $(SolutionDir)external\dll\$(Configuration) $(USERPROFILE)\EphineaPSO\mod </Command>
+      <Command>if not exist "%USERPROFILE%\EphineaPSO\mod" mkdir "%USERPROFILE%\EphineaPSO\mod"
+copy /Y "$(OutDir)*.dll" "$(USERPROFILE)\EphineaPSO\mod"
+copy /Y "$(SolutionDir)external\dll\$(Configuration)" "$(USERPROFILE)\EphineaPSO\mod"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -98,8 +99,9 @@ copy /Y $(SolutionDir)external\dll\$(Configuration) $(USERPROFILE)\EphineaPSO\mo
       <AdditionalLibraryDirectories>$(SolutionDir)external\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(OutDir) $(USERPROFILE)\EphineaPSO\mod 
-copy /Y $(SolutionDir)external\dll\$(Configuration) $(USERPROFILE)\EphineaPSO\mod </Command>
+      <Command>if not exist "%USERPROFILE%\EphineaPSO\mod" mkdir "%USERPROFILE%\EphineaPSO\mod"
+copy /Y "$(OutDir)*.dll" "$(USERPROFILE)\EphineaPSO\mod"
+copy /Y "$(SolutionDir)external\dll\$(Configuration)" "$(USERPROFILE)\EphineaPSO\mod"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

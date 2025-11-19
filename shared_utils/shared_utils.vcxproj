@@ -67,7 +67,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(OutDir)shared_utils.dll $(USERPROFILE)\EphineaPSO</Command>
+      <Command>copy /Y "$(OutDir)shared_utils.dll" "$(USERPROFILE)\EphineaPSO"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -90,7 +90,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(OutDir)shared_utils.dll $(USERPROFILE)\EphineaPSO</Command>
+      <Command>copy /Y "$(OutDir)shared_utils.dll" "$(USERPROFILE)\EphineaPSO"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

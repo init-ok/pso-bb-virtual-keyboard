@@ -75,7 +75,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(OutDir)d3d9.dll $(USERPROFILE)\EphineaPSO</Command>
+      <Command>copy /Y "$(OutDir)d3d9.dll" "$(USERPROFILE)\EphineaPSO"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -100,7 +100,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(OutDir)d3d9.dll $(USERPROFILE)\EphineaPSO</Command>
+      <Command>copy /Y "$(OutDir)d3d9.dll" "$(USERPROFILE)\EphineaPSO"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
