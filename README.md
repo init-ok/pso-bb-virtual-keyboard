@@ -31,7 +31,7 @@ Right analog stick: moves the onscreen keyboard.
 A `config.ini` file is created in the `mod` directory the first time the game is launched with the mod installed. You can use this file to configure the settings.
 
 ### Changing the toggle keyboard binding
-You can change the keybinding that's used to toggle the keyboard by modifying the toggle_keyboard_combo variable in the config file, for example, changing it to toggle when left shoulder and x are pressed at the same time:
+You can change the keybinding that's used to toggle the keyboard by modifying the toggle_keyboard_combo variable in the config file, for example, changing it to toggle when the left shoulder and x buttons are pressed at the same time:
 ```
 toggle_keyboard_combo = left_shoulder + x
 ```
