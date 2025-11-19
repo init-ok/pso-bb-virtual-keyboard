@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <Xinput.h>
 #include <basetsd.h>
+#include <bcrypt.h>
 #include <d3d9.h>
 #include <d3d9types.h>
 #include <dinput.h>
@@ -12,6 +13,7 @@
 #include <sysinfoapi.h>
 
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <string>
@@ -162,23 +164,8 @@ static char ToChar(wchar_t wch) {
   }
 }
 
-static DWORD(WINAPI* XInputGetStateOrig)(DWORD dwUserIndex,
-                                         XINPUT_STATE* pState) = nullptr;
-
-static DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex,
-                                       XINPUT_STATE* pState) {
-  DWORD result = XInputGetStateOrig(dwUserIndex, pState);
-  if (result != ERROR_SUCCESS || !pState) {
-    return result;
-  }
-
-  virtualKeyboard.HandleInput(*pState);
-  WORD buttons = pState->Gamepad.wButtons;
-
-  // Emulate keyboard keydown if button was pressed down
+void HandleGamepadInput(bool isAPressed, bool isBackPressed) {
   static bool aPreviouslyPressed = false;
-  bool isAPressed = (buttons & XINPUT_GAMEPAD_A) != 0;
-
   if (virtualKeyboard.enabled && isAPressed && !aPreviouslyPressed) {
     // Emulate keyboard key being pressed.
     auto pressedKey = virtualKeyboard.GetSelectedKey();
@@ -214,9 +201,7 @@ static DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex,
   }
   aPreviouslyPressed = isAPressed;
 
-  // Open virtual keyboard if back button was pressed.
   static bool backPreviouslyPressed = false;
-  bool isBackPressed = (buttons & XINPUT_GAMEPAD_BACK) != 0;
   if (!virtualKeyboard.enabled && isBackPressed && !backPreviouslyPressed) {
     LOG("Back button pressed: opening keyboard");
 
@@ -232,6 +217,44 @@ static DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex,
     virtualKeyboard.enabled = false;
   }
   backPreviouslyPressed = isBackPressed;
+}
+
+static DWORD(WINAPI* XInputGetStateOrig)(DWORD dwUserIndex,
+                                         XINPUT_STATE* pState) = nullptr;
+
+static DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex,
+                                       XINPUT_STATE* pState) {
+  DWORD result = XInputGetStateOrig(dwUserIndex, pState);
+  if (result != ERROR_SUCCESS || !pState) {
+    return result;
+  }
+
+  WORD buttons = pState->Gamepad.wButtons;
+  if (virtualKeyboard.enabled) {
+    float LX = pState->Gamepad.sThumbRX;
+    float LY = pState->Gamepad.sThumbRY;
+
+    // Apply deadzone (ignore small movements)
+    const int DEADZONE = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE;
+    if (abs(LX) < DEADZONE) LX = 0;
+    if (abs(LY) < DEADZONE) LY = 0;
+
+    // Normalize to -1.0 .. 1.0
+    float normLX = LX / 32767.0f;
+    float normLY = LY / 32767.0f;
+
+    bool upPressed = (buttons & XINPUT_GAMEPAD_DPAD_UP) != 0;
+    bool downPressed = (buttons & XINPUT_GAMEPAD_DPAD_DOWN) != 0;
+    bool leftPressed = (buttons & XINPUT_GAMEPAD_DPAD_LEFT) != 0;
+    bool rightPressed = (buttons & XINPUT_GAMEPAD_DPAD_RIGHT) != 0;
+
+    virtualKeyboard.HandleInput(leftPressed, rightPressed, upPressed,
+                                downPressed, normLX, normLY);
+  }
+
+  bool isAPressed = (buttons & XINPUT_GAMEPAD_A) != 0;
+  bool isBackPressed = (buttons & XINPUT_GAMEPAD_BACK) != 0;
+  HandleGamepadInput(isAPressed, isBackPressed);
 
   if (virtualKeyboard.enabled) {
     // Filter out button presses from the game.
@@ -242,33 +265,18 @@ static DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex,
 }
 
 static HRESULT(STDMETHODCALLTYPE* DInputCreateDevice)(
-    IDirectInput8W* self, REFGUID rguid, IDirectInputDevice8W** outDevice,
+    IDirectInput8A* self, REFGUID rguid, IDirectInputDevice8A** outDevice,
     LPUNKNOWN unk) = nullptr;
 
-typedef HRESULT(STDMETHODCALLTYPE* GetDeviceState_t)(IDirectInputDevice8W* self,
+typedef HRESULT(STDMETHODCALLTYPE* GetDeviceState_t)(IDirectInputDevice8A* self,
                                                      DWORD cbData,
                                                      LPVOID lpvData);
 GetDeviceState_t GetDeviceState = nullptr;
 
-IDirectInputDevice8W* keyboardDevice = nullptr;
+IDirectInputDevice8A* keyboardDevice = nullptr;
+IDirectInputDevice8A* controllerDevice = nullptr;
 
-// This function is used for:
-// - function keys (e.g. F11 to open/close chat)
-// - character controls (e.g. wasd)
-// It is not used for entering characters in chat.
-static HRESULT STDMETHODCALLTYPE GetDeviceStateHook(IDirectInputDevice8W* self,
-                                                    DWORD cbData,
-                                                    LPVOID lpvData) {
-  HRESULT hr = GetDeviceState(self, cbData, lpvData);
-  if (hr != DI_OK) {
-    // This is called so often that it doesn't make sense to log a failure.
-    return hr;
-  }
-
-  if (self != keyboardDevice) {
-    return hr;
-  }
-
+void GetKeyboardDeviceState(LPVOID lpvData) {
   // Check if keys are expired.
   auto timeNowMs = NowMs();
   auto expiredKeys = std::vector<EmulatedKey>();
@@ -295,13 +303,33 @@ static HRESULT STDMETHODCALLTYPE GetDeviceStateHook(IDirectInputDevice8W* self,
   for (auto& key : emulatedKeys) {
     diKeys[key.code] |= 0x80;
   }
+}
 
+void GetControllerDeviceState() {}
+
+// This function is used for:
+// - function keys (e.g. F11 to open/close chat)
+// - character controls (e.g. wasd)
+// It is not used for entering characters in chat.
+static HRESULT STDMETHODCALLTYPE GetDeviceStateHook(IDirectInputDevice8A* self,
+                                                    DWORD cbData,
+                                                    LPVOID lpvData) {
+  HRESULT hr = GetDeviceState(self, cbData, lpvData);
+  if (hr != DI_OK) {
+    // This is called so often that it doesn't make sense to log a failure.
+    return hr;
+  }
+  if (self == keyboardDevice) {
+    GetKeyboardDeviceState(lpvData);
+  } else if (self == controllerDevice) {
+    GetControllerDeviceState();
+  }
   return hr;
 }
 
 static HRESULT STDMETHODCALLTYPE
-DInputCreateDeviceHook(IDirectInput8W* self, REFGUID rguid,
-                       IDirectInputDevice8W** outDevice, LPUNKNOWN unk) {
+DInputCreateDeviceHook(IDirectInput8A* self, REFGUID rguid,
+                       IDirectInputDevice8A** outDevice, LPUNKNOWN unk) {
   LOG("Called");
   HRESULT hr = DInputCreateDevice(self, rguid, outDevice, unk);
   if (!SUCCEEDED(hr) || !outDevice || !*outDevice) {
@@ -309,17 +337,28 @@ DInputCreateDeviceHook(IDirectInput8W* self, REFGUID rguid,
     exit(1);
   }
 
-  if (!IsEqualGUID(rguid, GUID_SysKeyboard)) {
-    return hr;
+  DIDEVICEINSTANCEA info{};
+  info.dwSize = sizeof(DIDEVICEINSTANCEA);
+  HRESULT result = (*outDevice)->GetDeviceInfo(&info);
+  if (result != DI_OK) {
+    LOG("Failed to get device info: %d", result);
+    exit(1);
   }
-  LOG("Created keyboard device");
-  keyboardDevice = *outDevice;
-  static bool installedHooks = false;
-  if (!installedHooks) {
+  DWORD devType = GET_DIDEVICE_TYPE(info.dwDevType);
+
+  bool isGameController = devType == DI8DEVTYPE_GAMEPAD;
+  if (isGameController) {
+    LOG("Created controller device");
+    controllerDevice = *outDevice;
     void** vtable = *(void***)*outDevice;
     HookFunction(vtable[9], (void*)GetDeviceStateHook, (void**)&GetDeviceState);
-    LOG("GetDeviceState hooked");
-    installedHooks = true;
+    LOG("Controller GetDeviceState hooked");
+  } else if (IsEqualGUID(rguid, GUID_SysKeyboard)) {
+    LOG("Created keyboard device");
+    keyboardDevice = *outDevice;
+    void** vtable = *(void***)*outDevice;
+    HookFunction(vtable[9], (void*)GetDeviceStateHook, (void**)&GetDeviceState);
+    LOG("Keyboard GetDeviceState hooked");
   }
   return hr;
 }

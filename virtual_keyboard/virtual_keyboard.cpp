@@ -1,7 +1,6 @@
 #include "virtual_keyboard.h"
 
 #include <WinUser.h>
-#include <Xinput.h>
 #include <d3d9.h>
 #include <d3d9types.h>
 #include <d3dx9core.h>
@@ -97,7 +96,50 @@ void VirtualKeyboard::CreateKeys() {
   }
 }
 
-void VirtualKeyboard::HandleInput(XINPUT_STATE state) {
+int VirtualKeyboard::KeyWithOrigin(int x, int y, int defaultValue) {
+  for (size_t i = 0; i < keys.size(); ++i) {
+    auto& key = keys[i];
+    if (key.rect.left == x && key.rect.top == y) {
+      return (int)i;
+    }
+  }
+  return defaultValue;
+}
+
+int VirtualKeyboard::LastKeyInRow(int y) {
+  // Find the key with the given y such that x is maximized.
+  int maxX = 0;
+  int maxIndex = 0;
+  for (size_t i = 0; i < keys.size(); ++i) {
+    auto& key = keys[i];
+    if (key.rect.top == y) {
+      maxX = max(key.rect.left, maxX);
+      maxIndex = i;
+    }
+  }
+  return maxIndex;
+};
+
+int VirtualKeyboard::KeyContainingPoint(int x, int y, int defaultValue) {
+  for (size_t i = 0; i < keys.size(); ++i) {
+    auto& key = keys[i];
+
+    auto top = key.rect.top;
+    auto bottom = key.rect.bottom;
+
+    auto left = key.rect.left;
+    auto right = key.rect.right;
+
+    if (x >= left && x < right && y >= top && y < bottom) {
+      return (int)i;
+    }
+  }
+  return defaultValue;
+};
+
+void VirtualKeyboard::HandleInput(bool leftDPadPressed, bool rightDPadPressed,
+                                  bool upDPadPressed, bool downDPadPressed,
+                                  float thumbStickX, float thumbStickY) {
   if (!enabled) return;
 
   if (!initialized) {
@@ -107,71 +149,12 @@ void VirtualKeyboard::HandleInput(XINPUT_STATE state) {
 
   const float speed = 15.0f * scale;  // movement multiplier per frame
 
-  float LX = state.Gamepad.sThumbRX;
-  float LY = state.Gamepad.sThumbRY;
-
-  // Apply deadzone (ignore small movements)
-  const int DEADZONE = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE;
-  if (abs(LX) < DEADZONE) LX = 0;
-  if (abs(LY) < DEADZONE) LY = 0;
-
-  // Normalize to -1.0 .. 1.0
-  float normLX = LX / 32767.0f;
-  float normLY = LY / 32767.0f;
-
   // Move position
-  originX += (int)(normLX * speed);
-  originY -= (int)(normLY * speed);  // Y inverted for screen coords
-
-  // Clamp within window bounds
-  /* if (originX < 0) originX = 0;
-       if (originY < 0) originY = 0;
-       if (originX > 800) originX = 800;
-       if (originY > 600) originY = 600;*/
+  originX += (int)(thumbStickX * speed);
+  originY -= (int)(thumbStickY * speed);  // Y inverted for screen coords
 
   ULONGLONG now = GetTickCount64();
   if (now - lastInputTime < 150) return;  // debounce
-
-  auto keyWithOrigin = [this](int x, int y, int defaultValue) {
-    for (size_t i = 0; i < keys.size(); ++i) {
-      auto& key = keys[i];
-      if (key.rect.left == x && key.rect.top == y) {
-        return (int)i;
-      }
-    }
-    return defaultValue;
-  };
-
-  auto lastKeyInRow = [this](int y) {
-    // Find the key with the given y such that x is maximized.
-    int maxX = 0;
-    int maxIndex = 0;
-    for (size_t i = 0; i < keys.size(); ++i) {
-      auto& key = keys[i];
-      if (key.rect.top == y) {
-        maxX = max(key.rect.left, maxX);
-        maxIndex = i;
-      }
-    }
-    return maxIndex;
-  };
-
-  auto keyContainingPoint = [this](int x, int y, int defaultValue) {
-    for (size_t i = 0; i < keys.size(); ++i) {
-      auto& key = keys[i];
-
-      auto top = key.rect.top;
-      auto bottom = key.rect.bottom;
-
-      auto left = key.rect.left;
-      auto right = key.rect.right;
-
-      if (x >= left && x < right && y >= top && y < bottom) {
-        return (int)i;
-      }
-    }
-    return defaultValue;
-  };
 
   // Start from the top left of the current key.
   auto& selectedKey = keys[selectedIndex];
@@ -180,7 +163,7 @@ void VirtualKeyboard::HandleInput(XINPUT_STATE state) {
   int keyWidth = selectedKey.rect.right - selectedKey.rect.left;
   int keyHeight = selectedKey.rect.bottom - selectedKey.rect.top;
 
-  if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT) {
+  if (leftDPadPressed) {
     if (selectedIndex > 0) {
       auto& prevKey = keys[selectedIndex - 1];
       keyWidth = prevKey.rect.right - prevKey.rect.left;
@@ -189,30 +172,30 @@ void VirtualKeyboard::HandleInput(XINPUT_STATE state) {
     x -= keyWidth + separator;
 
     // Find out which key has this origin.
-    selectedIndex = keyWithOrigin(x, y, lastKeyInRow(y));
+    selectedIndex = KeyWithOrigin(x, y, LastKeyInRow(y));
     lastInputTime = now;
-  } else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) {
+  } else if (rightDPadPressed) {
     // Add the width of the current key and the separator.
     x += keyWidth + separator;
 
     // Find out which key has this origin.
-    selectedIndex = keyWithOrigin(x, y, keyWithOrigin(0, y, 0));
+    selectedIndex = KeyWithOrigin(x, y, KeyWithOrigin(0, y, 0));
     lastInputTime = now;
-  } else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP) {
+  } else if (upDPadPressed) {
     // Subtract the height of the current key and the separator.
     y -= keyHeight + separator;
 
     // Find out which key on the row above contains this point.
     // Else just keep the selected key.
-    selectedIndex = keyContainingPoint(x, y, selectedIndex);
+    selectedIndex = KeyContainingPoint(x, y, selectedIndex);
     lastInputTime = now;
-  } else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN) {
+  } else if (downDPadPressed) {
     // Add the height of the current key and the separator.
     y += keyHeight + separator;
 
     // Find out which key on the next row down contains this point.
     // Else just keep the selected key.
-    selectedIndex = keyContainingPoint(x, y, selectedIndex);
+    selectedIndex = KeyContainingPoint(x, y, selectedIndex);
     lastInputTime = now;
   }
 }
