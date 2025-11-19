@@ -36,9 +36,9 @@ You can change the keybinding that's used to toggle the keyboard by modifying th
 toggle_keyboard_combo = left_shoulder + x
 ```
 
-The possible buttons names you can specify here are case-insensitive and named according to the XInput API:
+The possible buttons names you can specify here are case-insensitive and named based on the XInput API:
 ```
-a, b, x, y, start, back, left_thumb, right_thumb, left_shoulder, right_shoulder, dpad_up, dpad_down, dpad_left, dpad_right
+a, b, x, y, back, start, left_shoulder, right_shoulder, left_trigger, right_trigger, dpad_up, dpad_down, dpad_left, dpad_right, left_thumb, right_thumb
 ```
 
 ### Changing the keyboard size
