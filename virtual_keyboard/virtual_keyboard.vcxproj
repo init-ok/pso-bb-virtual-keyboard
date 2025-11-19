@@ -101,7 +101,16 @@ copy /Y "$(SolutionDir)external\dll\$(Configuration)" "$(USERPROFILE)\EphineaPSO
     <PostBuildEvent>
       <Command>if not exist "%USERPROFILE%\EphineaPSO\mod" mkdir "%USERPROFILE%\EphineaPSO\mod"
 copy /Y "$(OutDir)*.dll" "$(USERPROFILE)\EphineaPSO\mod"
-copy /Y "$(SolutionDir)external\dll\$(Configuration)" "$(USERPROFILE)\EphineaPSO\mod"</Command>
+copy /Y "$(SolutionDir)external\dll\$(Configuration)" "$(USERPROFILE)\EphineaPSO\mod"
+
+if exist "$(OutDir)dist" rd /s /q "$(OutDir)dist"
+mkdir "$(OutDir)dist"
+mkdir "$(OutDir)dist\mod"
+copy /Y "$(OutDir)*.dll" "$(OutDir)dist\mod"
+copy /Y "$(SolutionDir)external\dll\$(Configuration)" "$(OutDir)dist\mod"
+copy /Y "$(OutDir)d3d9.dll" "$(OutDir)dist"
+copy /Y "$(OutDir)shared_utils.dll" "$(OutDir)dist"
+tar -a -c -f "$(OutDir)release.zip" -C "$(OutDir)dist" *</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -117,6 +126,9 @@ copy /Y "$(SolutionDir)external\dll\$(Configuration)" "$(USERPROFILE)\EphineaPSO
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\d3d9_loader\d3d9_loader.vcxproj">
+      <Project>{dc9e4d02-d3b9-4e28-9e15-975707ccfc58}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\shared_utils\shared_utils.vcxproj">
       <Project>{57d43641-cf59-40e3-9c27-60ca021f406e}</Project>
     </ProjectReference>
