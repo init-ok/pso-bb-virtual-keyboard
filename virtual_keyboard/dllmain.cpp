@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <Xinput.h>
 #include <basetsd.h>
+#include <bcrypt.h>
 #include <d3d9.h>
 #include <d3d9types.h>
 #include <dinput.h>
@@ -11,10 +12,17 @@
 #include <stdlib.h>
 #include <sysinfoapi.h>
 
+#include <algorithm>
+#include <cctype>
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <list>
+#include <memory>
+#include <numeric>
+#include <ranges>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "easyhook.h"
@@ -162,6 +170,71 @@ static char ToChar(wchar_t wch) {
   }
 }
 
+static std::vector<int> ButtonComboFromString(std::string comboString) {
+  std::unordered_map<std::string, int> controlMap{
+      {"DPAD_UP", XINPUT_GAMEPAD_DPAD_UP},
+      {"DPAD_DOWN", XINPUT_GAMEPAD_DPAD_DOWN},
+      {"DPAD_LEFT", XINPUT_GAMEPAD_DPAD_LEFT},
+      {"DPAD_RIGHT", XINPUT_GAMEPAD_DPAD_RIGHT},
+      {"START", XINPUT_GAMEPAD_START},
+      {"BACK", XINPUT_GAMEPAD_BACK},
+      {"LEFT_THUMB", XINPUT_GAMEPAD_LEFT_THUMB},
+      {"RIGHT_THUMB", XINPUT_GAMEPAD_RIGHT_THUMB},
+      {"LEFT_SHOULDER", XINPUT_GAMEPAD_LEFT_SHOULDER},
+      {"RIGHT_SHOULDER", XINPUT_GAMEPAD_RIGHT_SHOULDER},
+      {"A", XINPUT_GAMEPAD_A},
+      {"B", XINPUT_GAMEPAD_B},
+      {"X", XINPUT_GAMEPAD_X},
+      {"Y", XINPUT_GAMEPAD_Y}};
+
+  std::vector<int> comboButtons;
+  // Sanitize input
+  comboString.erase(
+      std::remove_if(comboString.begin(), comboString.end(), ::isspace),
+      comboString.end());
+
+  for (auto subrange : comboString | std::views::split('+')) {
+    auto buttonName = std::string(subrange.begin(), subrange.end());
+    // Convert to uppercase
+    std::transform(buttonName.begin(), buttonName.end(), buttonName.begin(),
+                   [](unsigned char c) { return std::toupper(c); });
+
+    auto it = controlMap.find(buttonName);
+    if (it == controlMap.end()) {
+      std::vector<std::string> validButtonNames;
+      for (const auto& pair : controlMap) {
+        validButtonNames.push_back(pair.first);
+      }
+      std::string buttonNamesString = std::accumulate(
+          std::next(validButtonNames.begin()), validButtonNames.end(),
+          validButtonNames[0], [&](const std::string& a, const std::string& b) {
+            return a + ", " + b;
+          });
+      LOG("Unknown button name: %s. Valid button choices: %s",
+          buttonName.c_str(), buttonNamesString.c_str());
+      exit(1);
+    }
+    LOG("Adding combo button: %s", buttonName.c_str());
+    auto buttonCode = it->second;
+    comboButtons.push_back(buttonCode);
+  }
+  return comboButtons;
+}
+
+static std::vector<int> toggleKeyboardButtonCombo;
+static bool IsToggleKeyboardButtonPressed(WORD buttons) {
+  if (toggleKeyboardButtonCombo.empty()) {
+    LOG("The 'Toggle keyboard' button combo was unexpectedly empty.");
+    exit(1);
+  }
+  for (auto key : toggleKeyboardButtonCombo) {
+    if ((buttons & key) == 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 static DWORD(WINAPI* XInputGetStateOrig)(DWORD dwUserIndex,
                                          XINPUT_STATE* pState) = nullptr;
 
@@ -188,7 +261,8 @@ static DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex,
     } else if (pressedKey == L"Exit") {
       LOG("Pressed Exit");
       // Emulate F11 once that finishes to close the virtual keyboard.
-      // Escape before that clears the entered text (if we're in the chat box).
+      // Escape before that clears the entered text (if we're in the chat
+      // box).
       emulatedKeys.push_back(EmulatedKey(DIK_ESCAPE, []() {
         emulatedKeys.push_back(
             EmulatedKey(DIK_F11, []() { virtualKeyboard.enabled = false; }));
@@ -215,23 +289,22 @@ static DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex,
   aPreviouslyPressed = isAPressed;
 
   // Open virtual keyboard if back button was pressed.
-  static bool backPreviouslyPressed = false;
-  bool isBackPressed = (buttons & XINPUT_GAMEPAD_BACK) != 0;
-  if (!virtualKeyboard.enabled && isBackPressed && !backPreviouslyPressed) {
-    LOG("Back button pressed: opening keyboard");
+  static bool toggleKbPressedPrev = false;
+  bool toggleKbPressed = IsToggleKeyboardButtonPressed(buttons);
+  if (!virtualKeyboard.enabled && toggleKbPressed && !toggleKbPressedPrev) {
+    LOG("Opening keyboard");
 
     // Emulate DirectInput F11 key
     emulatedKeys.push_back(EmulatedKey(DIK_F11));
-    virtualKeyboard.enabled = true;
-  } else if (virtualKeyboard.enabled && isBackPressed &&
-             !backPreviouslyPressed) {
-    LOG("Back button pressed: closing keyboard");
+  } else if (virtualKeyboard.enabled && toggleKbPressed &&
+             !toggleKbPressedPrev) {
+    LOG("Closing keyboard");
 
     // Emulate DirectInput F11 key
     emulatedKeys.push_back(EmulatedKey(DIK_F11));
     virtualKeyboard.enabled = false;
   }
-  backPreviouslyPressed = isBackPressed;
+  toggleKbPressedPrev = toggleKbPressed;
 
   if (virtualKeyboard.enabled) {
     // Filter out button presses from the game.
@@ -396,8 +469,8 @@ static void DrawVirtualKeyboard(IDirect3DDevice9* device) {
   state_block->Release();
 }
 
-// The game calls this multiple times per frame, so it isn't the best for doing
-// an overlay.
+// The game calls this multiple times per frame, so it isn't the best for
+// doing an overlay.
 static HRESULT APIENTRY EndSceneHook(IDirect3DDevice9* device) {
   DrawVirtualKeyboard(device);
   return EndScene(device);
@@ -413,8 +486,8 @@ static HRESULT STDMETHODCALLTYPE D3DCreateDeviceHook(
       D3DCreateDevice(pThis, Adapter, DeviceType, hFocusWindow, BehaviorFlags,
                       pPresentationParameters, ppReturnedDeviceInterface);
 
-  // If the original failed or didn't return a device pointer, just forward the
-  // result
+  // If the original failed or didn't return a device pointer, just forward
+  // the result
   if (FAILED(hr) || ppReturnedDeviceInterface == nullptr ||
       *ppReturnedDeviceInterface == nullptr) {
     return hr;
@@ -512,6 +585,9 @@ static void LoadConfig() {
   mINI::INIMap prefs = ini["prefs"];
   virtualKeyboard.scale =
       std::stoi(GetConfigValue(prefs, "virtual_keyboard_scale", "1"));
+
+  auto comboString = GetConfigValue(prefs, "toggle_keyboard_combo", "back");
+  toggleKeyboardButtonCombo = ButtonComboFromString(comboString);
 
   // Write the config back to disk
   ini["prefs"] = prefs;
