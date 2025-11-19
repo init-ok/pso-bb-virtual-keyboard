@@ -296,6 +296,7 @@ static DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex,
 
     // Emulate DirectInput F11 key
     emulatedKeys.push_back(EmulatedKey(DIK_F11));
+    virtualKeyboard.enabled = true;
   } else if (virtualKeyboard.enabled && toggleKbPressed &&
              !toggleKbPressedPrev) {
     LOG("Closing keyboard");
