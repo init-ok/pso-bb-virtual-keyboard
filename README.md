@@ -17,7 +17,7 @@ To use this mod, you will need the following:
 ## Installation
 1. Download the latest mod files from [Releases](https://github.com/init-ok/pso_bb_virtual_keyboard/releases/).
 2. Extract them to the game directory, e.g. `C:\Users\my_username\EphineaPSO`.
-3. Start the game and press the select button on your Xbox controller to open the keyboard.
+3. Start the game and press the select button on your controller to open the keyboard.
 
 ## Controls
 Select button (default setting): opens/closes the virtual keyboard.  
