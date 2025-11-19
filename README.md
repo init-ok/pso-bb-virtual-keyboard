@@ -1,5 +1,5 @@
 # About
-This mod lets you type in text chat and in text fields using a controller in Phantasy Star Online Blue Burst (PSOBB) on PC.
+This mod lets you type in text chat and in text fields using a controller in Phantasy Star Online Blue Burst (PSOBB) on PC by adding a virtual onscreen keyboard.
 
 ![demo image](img/demo.jpg)
 
@@ -15,9 +15,17 @@ To use this mod, you will need the following:
 ![required input settings](img/settings_input.jpg)
 
 ## Installation
-1. Download the latest mod files from Releases.
+1. Download the latest mod files from [Releases](https://github.com/init-ok/pso_bb_virtual_keyboard/releases/).
 2. Extract them to the game directory, e.g. `C:\Users\my_username\EphineaPSO`.
-3. Start the game and press the back button on your Xbox controller to open the keyboard.
+3. Start the game and press the select button on your Xbox controller to open the keyboard.
+
+## Controls
+Select button: opens/closes the virtual keyboard.  
+
+The following controls can be used when the keyboard is open:  
+D-pad: moves the keyboard cursor.  
+A button: presses the selected button.  
+Right analog stick: moves the onscreen keyboard.  
 
 ## Changing the keyboard size
 A `config.ini` file is created the first time the game is launched with the mod installed.
