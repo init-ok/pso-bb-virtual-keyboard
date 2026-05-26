@@ -168,13 +168,17 @@ static void LoadModDll(std::wstring path, std::string loadFuncName) {
     LOG("Failed to find Load() function");
     exit(1);
   }
-  funcPtr();
+
+  void(WINAPI * loadModFunc)(FARPROC d3dCreate9Orig) =
+      (void(WINAPI*)(FARPROC))funcPtr;
+
+  loadModFunc(d3d9.OrignalDirect3DCreate9);
 }
 
 static void MaybeLoadModDll(std::wstring path) {
   auto exports = GetExportedFunctions(path);
   // name from dumpbin /exports mydll.dll
-  auto loadFuncName = std::string("_LoadMod@0");
+  auto loadFuncName = std::string("_LoadMod@4");
   auto it = std::find(exports.begin(), exports.end(), loadFuncName);
   if (it == exports.end()) {
     LOG("Skipping dll without LoadMod() function %S", path.c_str());

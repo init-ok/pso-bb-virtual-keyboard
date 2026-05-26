@@ -611,7 +611,7 @@ static void LoadConfig() {
   file.write(ini, true);
 }
 
-extern "C" __declspec(dllexport) void WINAPI LoadMod() {
+extern "C" __declspec(dllexport) void WINAPI LoadMod(FARPROC d3dCreate9Orig) {
   LoadConfig();
 
   // Hook xinput for virtual keyboard controls.
@@ -623,6 +623,18 @@ extern "C" __declspec(dllexport) void WINAPI LoadMod() {
                (void*)DirectInput8CreateHook, (void**)&DirectInput8CreateOrig);
 
   // Hook d3d9 for the virtual keyboard overlay.
-  HookFunction("d3d9.dll", "Direct3DCreate9", (void*)Direct3DCreate9Hook,
+  //
+  // GetProcAddress(Direct3DCreate9) will return FakeDirect3DCreate9 from the
+  // DLL proxy. FakeDirect3DCreate9 is a __declspec(naked) function (out of
+  // convenience), meaning it has no function prologue and epilogue,
+  // which EasyHook may have trouble hooking.
+  //
+  // Possible workarounds:
+  // 1. (Chosen) Pass the original Direct3DCreate9 function address from the
+  // proxy to our mod.
+  // 2. Get the original Direct3DCreate9 function address by loading it directly
+  // from the system d3d9 DLL using an absolute path.
+  // 3. Convert FakeDirect3DCreate9 to full C++ (no assembly).
+  HookFunction((void*)d3dCreate9Orig, (void*)Direct3DCreate9Hook,
                (void**)&Direct3DCreate9Orig);
 }
