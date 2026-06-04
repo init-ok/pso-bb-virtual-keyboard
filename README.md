@@ -1,8 +1,9 @@
-# About
+## About
 Normally, typing in text fields or chatting in Phantasy Star Online Blue Burst (PSOBB) on PC requires a physical keyboard.
 This mod brings back the classic console experience by adding a virtual, on-screen keyboard for chatting and typing - just like the original game on the SEGA Dreamcast.
 
-![demo image](img/demo.jpg)
+## Demo
+https://github.com/user-attachments/assets/8cfbd83e-f32a-4a41-888b-45e117c26c29
 
 ## Compatibility
 To use this mod, you will need the following:
